@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 确保 Plasmo 前缀的类名生效 */
+@layer utilities {
+  .plasmo-h-full {
+    height: 100%;
+  }
+  .plasmo-w-full {
+    width: 100%;
+  }
+  .plasmo-flex {
+    display: flex;
+  }
+  .plasmo-flex-col {
+    flex-direction: column;
+  }
+  .plasmo-flex-none {
+    flex: none;
+  }
+  .plasmo-flex-1 {
+    flex: 1 1 0%;
+  }
+  .plasmo-bg-white {
+    background-color: rgb(255 255 255);
+  }
+  .plasmo-bg-gray-50 {
+    background-color: rgb(249 250 251);
+  }
+  .plasmo-text-gray-900 {
+    color: rgb(17 24 39);
+  }
+  .plasmo-text-gray-600 {
+    color: rgb(75 85 99);
+  }
+  .plasmo-text-gray-500 {
+    color: rgb(107 114 128);
+  }
+  .plasmo-text-gray-400 {
+    color: rgb(156 163 175);
+  }
+  .plasmo-border {
+    border-width: 1px;
+  }
+  .plasmo-border-b {
+    border-bottom-width: 1px;
+  }
+  .plasmo-border-t {
+    border-top-width: 1px;
+  }
+  .plasmo-border-gray-200 {
+    border-color: rgb(229 231 235);
+  }
+  .plasmo-rounded {
+    border-radius: 0.25rem;
+  }
+  .plasmo-rounded-md {
+    border-radius: 0.375rem;
+  }
+  .plasmo-p-1 {
+    padding: 0.25rem;
+  }
+  .plasmo-p-2 {
+    padding: 0.5rem;
+  }
+  .plasmo-p-3 {
+    padding: 0.75rem;
+  }
+  .plasmo-p-4 {
+    padding: 1rem;
+  }
+  .plasmo-px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .plasmo-py-2\.5 {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+  .plasmo-py-3 {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  .plasmo-text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  .plasmo-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .plasmo-text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  .plasmo-font-medium {
+    font-weight: 500;
+  }
+  .plasmo-font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .plasmo-overflow-y-auto {
+    overflow-y: auto;
+  }
+  .plasmo-overflow-x-auto {
+    overflow-x: auto;
+  }
+  .plasmo-cursor-pointer {
+    cursor: pointer;
+  }
+  .plasmo-transition-colors {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+  .plasmo-hover\:plasmo-bg-gray-50:hover {
+    background-color: rgb(249 250 251);
+  }
+  .plasmo-hover\:plasmo-bg-gray-100:hover {
+    background-color: rgb(243 244 246);
+  }
+  .plasmo-hover\:plasmo-text-gray-600:hover {
+    color: rgb(75 85 99);
+  }
+  .plasmo-focus\:plasmo-ring-1:focus {
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  }
+  .plasmo-focus\:plasmo-ring-blue-500:focus {
+    --tw-ring-color: rgb(59 130 246);
+  }
+  .plasmo-focus\:plasmo-border-blue-500:focus {
+    border-color: rgb(59 130 246);
+  }
+  .plasmo-outline-none:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+}
+
+/* 基础样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 确保内容区域正确显示 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
