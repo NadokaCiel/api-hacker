@@ -256,8 +256,8 @@ export function ApiSidebar() {
   }, [])
 
   const filteredRequests = requests.filter((req) => {
-    const searchStr = `${req.url} ${req.method}`.toLowerCase()
-    return searchStr.includes(filter.toLowerCase())
+    const searchStr = `${req?.url} ${req?.method}`.toLowerCase()
+    return searchStr?.includes(filter?.toLowerCase())
   })
 
   return (
@@ -290,13 +290,13 @@ export function ApiSidebar() {
 
       {/* 请求列表 */}
       <div className="plasmo-flex-1 plasmo-overflow-y-auto">
-        {filteredRequests.map((request) => (
+        {filteredRequests.filter(req => req != null).map((request) => (
           <div
-            key={request.id}
+            key={request?.id || Math.random().toString(36).substr(2, 9)}
             className={`plasmo-p-3 plasmo-border-b plasmo-border-gray-200 plasmo-cursor-pointer hover:plasmo-bg-gray-50 ${
-              selectedRequest?.id === request.id ? "plasmo-bg-blue-50" : ""
+              selectedRequest?.id === request?.id ? "plasmo-bg-blue-50" : ""
             }`}
-            onClick={() => setSelectedRequest(request)}
+            onClick={() => request && setSelectedRequest(request)}
           >
             <div className="plasmo-flex plasmo-justify-between plasmo-items-start">
               <div className="plasmo-flex-1 plasmo-min-w-0">
