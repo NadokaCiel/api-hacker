@@ -1,14 +1,20 @@
 import type { PlasmoCSConfig } from "plasmo"
+import { sanitizeObject } from "~utils";
 
 // 调试日志函数
 const debug = (message: string, data?: any) => {
   console.log(`[API Hacker Debug] [Main World] ${message}`, data || "")
 }
 
+
+
 // 创建一个自定义事件用于与 Content Script 通信
 const notifyContentScript = (request: any) => {
+  const data = sanitizeObject(request);
+  debug("XHR Request event data: ", data)
   window.dispatchEvent(new CustomEvent("api-hacker-request", {
-    detail: request
+    detail: data,
+    bubbles: true,
   }))
 }
 
@@ -17,7 +23,7 @@ const originalXHROpen = XMLHttpRequest.prototype.open
 const originalXHRSend = XMLHttpRequest.prototype.send
 
 XMLHttpRequest.prototype.open = function (method: string, url: string, ...args: any[]) {
-  debug("XHR Request intercepted", { method, url })
+  // debug("XHR Request intercepted", { method, url })
   this._requestData = {
     method,
     url,
@@ -82,7 +88,7 @@ XMLHttpRequest.prototype.send = function (body: any) {
 // 拦截 fetch
 const originalFetch = window.fetch
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-  debug("Fetch Request intercepted", { input, init })
+  // debug("Fetch Request intercepted", { input, init })
   const startTime = Date.now()
   const requestData = {
     method: init?.method || "GET",

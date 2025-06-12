@@ -21,7 +21,7 @@ const MAX_REQUESTS = 100 // 最大存储请求数
 
 // 创建自定义事件用于通知 UI 更新
 const createCustomEvent = (request: ApiRequest) => {
-  const event = new CustomEvent("apiRequestUpdate", { 
+  const event = new CustomEvent("apiRequestUpdate", {
     detail: { requests: [...apiRequests] }
   })
   document.dispatchEvent(event)
@@ -40,172 +40,6 @@ const formatRequestBody = (body: any): any => {
   return body
 }
 
-// 监听 XMLHttpRequest
-const setupXHRInterceptor = () => {
-  const originalXHROpen = XMLHttpRequest.prototype.open
-  const originalXHRSend = XMLHttpRequest.prototype.send
-
-  XMLHttpRequest.prototype.open = function (method: string, url: string) {
-    this._requestData = {
-      method,
-      url,
-      startTime: Date.now(),
-      requestHeaders: {}
-    }
-    return originalXHROpen.apply(this, arguments as any)
-  }
-
-  XMLHttpRequest.prototype.send = function (body: any) {
-    if (this._requestData) {
-      this._requestData.requestBody = formatRequestBody(body)
-
-      // 记录请求头
-      const requestHeaders: Record<string, string> = {}
-      this.getAllResponseHeaders()
-        .split("\r\n")
-        .forEach((line) => {
-          const [key, value] = line.split(": ")
-          if (key && value) {
-            requestHeaders[key.toLowerCase()] = value
-          }
-        })
-      this._requestData.requestHeaders = requestHeaders
-
-      this.addEventListener("load", function () {
-        const endTime = Date.now()
-        const duration = endTime - this._requestData.startTime
-
-        let responseBody
-        try {
-          responseBody = JSON.parse(this.responseText)
-        } catch {
-          responseBody = this.responseText
-        }
-
-        const request: ApiRequest = {
-          id: Math.random().toString(36).substr(2, 9),
-          timestamp: this._requestData.startTime,
-          method: this._requestData.method,
-          url: this._requestData.url,
-          requestHeaders: this._requestData.requestHeaders,
-          requestBody: this._requestData.requestBody,
-          responseStatus: this.status,
-          responseHeaders: this._requestData.requestHeaders,
-          responseBody,
-          duration
-        }
-
-        apiRequests.unshift(request)
-        if (apiRequests.length > MAX_REQUESTS) {
-          apiRequests.pop()
-        }
-        createCustomEvent(request)
-      })
-
-      this.addEventListener("error", function (error) {
-        const request: ApiRequest = {
-          id: Math.random().toString(36).substr(2, 9),
-          timestamp: this._requestData.startTime,
-          method: this._requestData.method,
-          url: this._requestData.url,
-          requestHeaders: this._requestData.requestHeaders,
-          requestBody: this._requestData.requestBody,
-          responseStatus: this.status,
-          responseHeaders: {},
-          responseBody: null,
-          duration: Date.now() - this._requestData.startTime,
-          error: error.toString()
-        }
-        apiRequests.unshift(request)
-        if (apiRequests.length > MAX_REQUESTS) {
-          apiRequests.pop()
-        }
-        createCustomEvent(request)
-      })
-    }
-    return originalXHRSend.apply(this, arguments as any)
-  }
-}
-
-// 监听 Fetch
-const setupFetchInterceptor = () => {
-  const originalFetch = window.fetch
-
-  window.fetch = async (...args) => {
-    const [resource, config] = args
-    const startTime = Date.now()
-    const requestData = {
-      method: config?.method || "GET",
-      url:
-        typeof resource === "string"
-          ? resource
-          : resource instanceof Request
-            ? resource.url
-            : resource.toString(),
-      requestHeaders: config?.headers || {},
-      requestBody: formatRequestBody(config?.body)
-    }
-
-    try {
-      const response = await originalFetch(...args)
-      const responseClone = response.clone()
-      const endTime = Date.now()
-
-      let responseBody
-      try {
-        responseBody = await responseClone.json()
-      } catch {
-        try {
-          responseBody = await responseClone.text()
-        } catch {
-          responseBody = null
-        }
-      }
-
-      const request: ApiRequest = {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: startTime,
-        method: requestData.method,
-        url: requestData.url,
-        requestHeaders: requestData.requestHeaders as Record<string, string>,
-        requestBody: requestData.requestBody,
-        responseStatus: response.status,
-        responseHeaders: Object.fromEntries(response.headers.entries()),
-        responseBody,
-        duration: endTime - startTime
-      }
-
-      apiRequests.unshift(request)
-      if (apiRequests.length > MAX_REQUESTS) {
-        apiRequests.pop()
-      }
-      createCustomEvent(request)
-
-      return response
-    } catch (error) {
-      const request: ApiRequest = {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: startTime,
-        method: requestData.method,
-        url: requestData.url,
-        requestHeaders: requestData.requestHeaders as Record<string, string>,
-        requestBody: requestData.requestBody,
-        responseStatus: 0,
-        responseHeaders: {},
-        responseBody: null,
-        duration: Date.now() - startTime,
-        error: error.toString()
-      }
-      apiRequests.unshift(request)
-      if (apiRequests.length > MAX_REQUESTS) {
-        apiRequests.pop()
-      }
-      createCustomEvent(request)
-      throw error
-    }
-  }
-}
-
 // 调试日志函数
 const debug = (message: string, data?: any) => {
   console.log(`[API Hacker Debug] [Sidebar] ${message}`, data || "")
@@ -217,23 +51,32 @@ debug("Sidebar component initialized")
 export function ApiSidebar() {
   const [requests, setRequests] = useState<ApiRequest[]>([])
   const [filter, setFilter] = useState("")
-  const [selectedRequest, setSelectedRequest] = useState<ApiRequest | null>(null)
+  const [selectedRequest, setSelectedRequest] = useState<ApiRequest | null>(
+    null
+  )
 
   useEffect(() => {
     debug("Setting up message listener")
-    
-    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+
+    const messageListener = (
+      message: any,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: any) => void
+    ) => {
       debug("Received message in sidebar", { message, sender })
-      
+
       if (message.type === "apiRequestUpdate") {
-        debug("Updating requests in sidebar", { 
+        debug("Updating requests in sidebar", {
           requestCount: message.data?.length,
-          tabId: sender.tab?.id 
+          tabId: sender.tab?.id
         })
-        setRequests(message.data || [])
+        if (message?.data) {
+          // setRequests(message.data || [])
+          setRequests(prev => [...(message.data || []), ...prev]);
+        }
         sendResponse({ status: "received" })
       }
-      
+
       return true // 保持消息通道开放以支持异步响应
     }
 
@@ -282,62 +125,72 @@ export function ApiSidebar() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-          <svg className="plasmo-absolute plasmo-left-2 plasmo-top-2 plasmo-w-4 plasmo-h-4 plasmo-text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            className="plasmo-absolute plasmo-left-2 plasmo-top-2 plasmo-w-4 plasmo-h-4 plasmo-text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
         </div>
       </div>
 
       {/* 请求列表 */}
       <div className="plasmo-flex-1 plasmo-overflow-y-auto">
-        {filteredRequests.filter(req => req != null).map((request) => (
-          <div
-            key={request?.id || Math.random().toString(36).substr(2, 9)}
-            className={`plasmo-p-3 plasmo-border-b plasmo-border-gray-200 plasmo-cursor-pointer hover:plasmo-bg-gray-50 ${
-              selectedRequest?.id === request?.id ? "plasmo-bg-blue-50" : ""
-            }`}
-            onClick={() => request && setSelectedRequest(request)}
-          >
-            <div className="plasmo-flex plasmo-justify-between plasmo-items-start">
-              <div className="plasmo-flex-1 plasmo-min-w-0">
-                <div className="plasmo-flex plasmo-items-center plasmo-space-x-2">
-                  <span
-                    className={`plasmo-px-2 plasmo-py-0.5 plasmo-text-xs plasmo-font-medium plasmo-rounded ${
-                      request.method === "GET"
-                        ? "plasmo-bg-green-100 plasmo-text-green-800"
-                        : request.method === "POST"
-                        ? "plasmo-bg-blue-100 plasmo-text-blue-800"
-                        : request.method === "PUT"
-                        ? "plasmo-bg-yellow-100 plasmo-text-yellow-800"
-                        : request.method === "DELETE"
-                        ? "plasmo-bg-red-100 plasmo-text-red-800"
-                        : "plasmo-bg-gray-100 plasmo-text-gray-800"
-                    }`}
-                  >
-                    {request.method}
-                  </span>
-                  <span
-                    className={`plasmo-px-2 plasmo-py-0.5 plasmo-text-xs plasmo-font-medium plasmo-rounded ${
-                      request.responseStatus >= 200 && request.responseStatus < 300
-                        ? "plasmo-bg-green-100 plasmo-text-green-800"
-                        : request.responseStatus >= 400
-                        ? "plasmo-bg-red-100 plasmo-text-red-800"
-                        : "plasmo-bg-yellow-100 plasmo-text-yellow-800"
-                    }`}
-                  >
-                    {request.responseStatus}
-                  </span>
-                </div>
-                <div className="plasmo-mt-1 plasmo-text-sm plasmo-text-gray-900 plasmo-truncate">
-                  {request.url}
-                </div>
-                <div className="plasmo-mt-1 plasmo-text-xs plasmo-text-gray-500">
-                  {new Date(request.timestamp).toLocaleTimeString()} · {request.duration}ms
+        {filteredRequests
+          .filter((req) => req != null)
+          .map((request) => (
+            <div
+              key={request?.id || Math.random().toString(36).substr(2, 9)}
+              className={`plasmo-p-3 plasmo-border-b plasmo-border-gray-200 plasmo-cursor-pointer hover:plasmo-bg-gray-50 ${
+                selectedRequest?.id === request?.id ? "plasmo-bg-blue-50" : ""
+              }`}
+              onClick={() => request && setSelectedRequest(request)}>
+              <div className="plasmo-flex plasmo-justify-between plasmo-items-start">
+                <div className="plasmo-flex-1 plasmo-min-w-0">
+                  <div className="plasmo-flex plasmo-items-center plasmo-space-x-2">
+                    <span
+                      className={`plasmo-px-2 plasmo-py-0.5 plasmo-text-xs plasmo-font-medium plasmo-rounded ${
+                        request.method === "GET"
+                          ? "plasmo-bg-green-100 plasmo-text-green-800"
+                          : request.method === "POST"
+                            ? "plasmo-bg-blue-100 plasmo-text-blue-800"
+                            : request.method === "PUT"
+                              ? "plasmo-bg-yellow-100 plasmo-text-yellow-800"
+                              : request.method === "DELETE"
+                                ? "plasmo-bg-red-100 plasmo-text-red-800"
+                                : "plasmo-bg-gray-100 plasmo-text-gray-800"
+                      }`}>
+                      {request.method}
+                    </span>
+                    <span
+                      className={`plasmo-px-2 plasmo-py-0.5 plasmo-text-xs plasmo-font-medium plasmo-rounded ${
+                        request.responseStatus >= 200 &&
+                        request.responseStatus < 300
+                          ? "plasmo-bg-green-100 plasmo-text-green-800"
+                          : request.responseStatus >= 400
+                            ? "plasmo-bg-red-100 plasmo-text-red-800"
+                            : "plasmo-bg-yellow-100 plasmo-text-yellow-800"
+                      }`}>
+                      {request.responseStatus}
+                    </span>
+                  </div>
+                  <div className="plasmo-mt-1 plasmo-text-sm plasmo-text-gray-900 plasmo-truncate">
+                    {request.url}
+                  </div>
+                  <div className="plasmo-mt-1 plasmo-text-xs plasmo-text-gray-500">
+                    {new Date(request.timestamp).toLocaleTimeString()} ·{" "}
+                    {request.duration}ms
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* 请求详情 */}
@@ -345,35 +198,47 @@ export function ApiSidebar() {
         <div className="plasmo-flex-none plasmo-border-t plasmo-border-gray-200 plasmo-bg-white">
           <div className="plasmo-p-4">
             <div className="plasmo-mb-4">
-              <h3 className="plasmo-text-sm plasmo-font-medium plasmo-text-gray-900">请求详情</h3>
+              <h3 className="plasmo-text-sm plasmo-font-medium plasmo-text-gray-900">
+                请求详情
+              </h3>
               <div className="plasmo-mt-2 plasmo-space-y-4">
                 <div>
-                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">请求头</h4>
+                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">
+                    请求头
+                  </h4>
                   <pre className="plasmo-mt-1 plasmo-p-2 plasmo-bg-gray-50 plasmo-rounded plasmo-text-xs plasmo-font-mono plasmo-overflow-x-auto">
                     {JSON.stringify(selectedRequest.requestHeaders, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">请求体</h4>
+                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">
+                    请求体
+                  </h4>
                   <pre className="plasmo-mt-1 plasmo-p-2 plasmo-bg-gray-50 plasmo-rounded plasmo-text-xs plasmo-font-mono plasmo-overflow-x-auto">
                     {JSON.stringify(selectedRequest.requestBody, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">响应头</h4>
+                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">
+                    响应头
+                  </h4>
                   <pre className="plasmo-mt-1 plasmo-p-2 plasmo-bg-gray-50 plasmo-rounded plasmo-text-xs plasmo-font-mono plasmo-overflow-x-auto">
                     {JSON.stringify(selectedRequest.responseHeaders, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">响应体</h4>
+                  <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-gray-500">
+                    响应体
+                  </h4>
                   <pre className="plasmo-mt-1 plasmo-p-2 plasmo-bg-gray-50 plasmo-rounded plasmo-text-xs plasmo-font-mono plasmo-overflow-x-auto">
                     {JSON.stringify(selectedRequest.responseBody, null, 2)}
                   </pre>
                 </div>
                 {selectedRequest.error && (
                   <div>
-                    <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-red-500">错误</h4>
+                    <h4 className="plasmo-text-xs plasmo-font-medium plasmo-text-red-500">
+                      错误
+                    </h4>
                     <pre className="plasmo-mt-1 plasmo-p-2 plasmo-bg-red-50 plasmo-rounded plasmo-text-xs plasmo-font-mono plasmo-overflow-x-auto plasmo-text-red-600">
                       {selectedRequest.error}
                     </pre>

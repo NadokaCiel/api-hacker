@@ -21,8 +21,9 @@ interface ApiRequest {
 }
 
 // 监听来自 MAIN world 的事件
-window.addEventListener("api-hacker-request", ((event: CustomEvent) => {
-  const request = event.detail as ApiRequest
+window.addEventListener("api-hacker-request", ((event: CustomEvent<ApiRequest>) => {
+  const request = event.detail
+  // debug("Received event from main world", event)
   debug("Received request from main world", request)
   
   // 通过 chrome.runtime.sendMessage 发送到扩展的其他部分
@@ -32,7 +33,7 @@ window.addEventListener("api-hacker-request", ((event: CustomEvent) => {
       if (chrome.runtime.lastError) {
         debug("Error sending message:", chrome.runtime.lastError)
       } else {
-        debug("Message sent successfully", response)
+        // debug("Message sent successfully", response)
       }
     }
   )
@@ -45,7 +46,7 @@ window.addEventListener("load", () => {
     if (chrome.runtime.lastError) {
       debug("Error sending test message:", chrome.runtime.lastError)
     } else {
-      debug("Test message sent successfully", response)
+      // debug("Test message sent successfully", response)
     }
   })
 })
